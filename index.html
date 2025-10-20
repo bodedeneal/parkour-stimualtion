@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Minecraft Parlor Dreamcaster Compilation</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #222;
+    }
+    #video-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+      overflow: hidden;
+    }
+    #yt-player {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120vw; height: 120vh; /* Slightly zoomed for dreamy effect */
+      filter: blur(16px) brightness(1.08) opacity(0.8) grayscale(0.2);
+      pointer-events: none; /* Prevent interaction */
+    }
+    #fog {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 2;
+      pointer-events: none;
+      background: url('https://i.imgur.com/2Jg3bY1.png'); /* Fog PNG, swap for your own if you prefer */
+      opacity: 0.33;
+      background-size: cover;
+      mix-blend-mode: lighten;
+    }
+    body {
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="video-container">
+    <div id="yt-player"></div>
+    <div id="fog"></div>
+  </div>
+  <script>
+    // Prevent all context menu and key events
+    window.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('keydown', e => {
+      e.preventDefault();
+      return false;
+    });
+
+    // Playlist — add more videos as needed
+    const videos = [
+      {id: 'u7kdVe8q5zs', duration: 10004}, // Minecraft Parlor
+      {id: '85z7jqGAGcc', duration: 10170}, // Minecraft Ambience
+      // Add more like: {id: 'VIDEO_ID', duration: VIDEO_LENGTH_SECONDS}
+    ];
+
+    // Clip duration settings
+    const minClip = 120; // seconds
+    const maxClip = 300; // seconds
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // YouTube Iframe API loader
+    let tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
+
+    let player;
+    let clipTimeout;
+
+    function playRandomClip() {
+      // Pick a random video from the playlist
+      const video = videos[getRandomInt(0, videos.length - 1)];
+
+      // Choose random start time (avoid starting near the end)
+      const clipLength = getRandomInt(minClip, maxClip);
+      const maxStart = Math.max(1, video.duration - clipLength - 1);
+      const start = getRandomInt(1, maxStart);
+
+      // Remove previous player if it exists
+      if (player && player.destroy) player.destroy();
+
+      // Create new player
+      player = new YT.Player('yt-player', {
+        videoId: video.id,
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          iv_load_policy: 3,
+          rel: 0,
+          showinfo: 0,
+          start: start,
+        },
+        events: {
+          'onReady': function(e) {
+            e.target.mute();
+            e.target.playVideo();
+            // Schedule next clip
+            clearTimeout(clipTimeout);
+            clipTimeout = setTimeout(playRandomClip, clipLength * 1000);
+          },
+          'onStateChange': function(e) {
+            // On end or error, load another clip
+            if (e.data === YT.PlayerState.ENDED || e.data === YT.PlayerState.UNSTARTED) {
+              clearTimeout(clipTimeout);
+              playRandomClip();
+            }
+          }
+        }
+      });
+    }
+
+    // Start playback when API is ready
+    window.onYouTubeIframeAPIReady = function() {
+      playRandomClip();
+    };
+  </script>
+</body>
+</html>
